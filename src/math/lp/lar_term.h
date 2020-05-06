@@ -20,7 +20,7 @@
 #pragma once
 #include "math/lp/indexed_vector.h"
 #include "util/map.h"
-
+#include "math/lp/numeric_pair.h"
 namespace lp {
 
 class lar_term {
@@ -177,5 +177,45 @@ public:
     }
     const_iterator begin() const { return m_coeffs.begin();}
     const_iterator end() const { return m_coeffs.end(); }
+
+    class var_coeff {
+        unsigned m_var;
+        const mpq & m_coeff;
+    public:
+        var_coeff(unsigned var, const mpq & val) : m_var(var), m_coeff(val) { }
+        unsigned var() const { return m_var; }
+        const mpq & coeff() const { return m_coeff; }
+    };
+
+
+public:
+    class iterator_with_term_column {        
+        u_map<mpq>::iterator m_t;
+        unsigned        m_j;
+        bool            m_j_returned;
+    public:
+        iterator_with_term_column(u_map<mpq>::iterator t, unsigned j,  bool j_returned):
+            m_t(t),
+            m_j(j),
+            m_j_returned(j_returned) {}
+        const var_coeff operator*() {
+            return m_j_returned? var_coeff(m_t->m_key, m_t->m_value): var_coeff(m_j, numeric_traits<rational>::minus_one()); }
+        iterator_with_term_column& operator++() { if (m_j_returned) m_t++; else m_j_returned = true; return *this; }
+        iterator_with_term_column operator++(int) { iterator_with_term_column tmp = *this; ++*this; return tmp; }
+        bool operator==(iterator_with_term_column const& other) const { return m_t == other.m_t &&
+                m_j == other.m_j && m_j_returned == other.m_j_returned; }
+        bool operator!=(iterator_with_term_column const& other) const { return !(*this == other); }
+    };
+
+    struct iterator_with_term_column_factory {
+        const lar_term& m_t;
+        unsigned  m_j;
+        iterator_with_term_column_factory(const lar_term& t, unsigned j): m_t(t), m_j(j) {}
+        iterator_with_term_column begin() const { return iterator_with_term_column(m_t.m_coeffs.begin(), m_j, false); }
+        iterator_with_term_column end() const { return iterator_with_term_column(m_t.m_coeffs.end(), m_j, true); }
+    };
+
+    static iterator_with_term_column_factory get_var_coeffs(const lar_term &t, unsigned j) { return iterator_with_term_column_factory(t, j); }
+    
 };
 }

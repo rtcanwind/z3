@@ -90,6 +90,7 @@ class lar_solver : public column_namer {
     // the set of column indices j such that bounds have changed for j
     u_set                                               m_columns_with_changed_bound;
     u_set                                               m_rows_with_changed_bounds;
+    u_set                                               m_terms_with_changed_bounds;
     u_set                                               m_basic_columns_with_changed_cost;
     // these are basic columns with the value changed, so the the corresponding row in the tableau
     // does not sum to zero anymore
@@ -101,7 +102,8 @@ class lar_solver : public column_namer {
     std::unordered_map<lar_term, std::pair<mpq, unsigned>, term_hasher, term_comparer>
     m_normalized_terms_to_columns;
     vector<impq>                                        m_backup_x;
-    stacked_vector<unsigned>                            m_usage_in_terms;
+    typedef int_hashtable<int_hash, default_eq<int>>    hash_u_set;
+    vector<hash_u_set>                                  m_columns_to_terms;
     // end of fields
 
     ////////////////// methods ////////////////////////////////
@@ -169,7 +171,7 @@ class lar_solver : public column_namer {
         lp_bound_propagator & bp);
     void substitute_basis_var_in_terms_for_row(unsigned i);
     void calculate_implied_bounds_for_row(unsigned i, lp_bound_propagator & bp);    
-    void propagate_bounds_on_a_term(const lar_term& t, lp_bound_propagator & bp, unsigned term_offset);
+    void propagate_bounds_on_a_term(lp_bound_propagator & bp, unsigned);
     static void clean_popped_elements(unsigned n, u_set& set);
     static void shrink_inf_set_after_pop(unsigned n, u_set & set);
     bool maximize_term_on_tableau(const lar_term & term,
@@ -269,7 +271,10 @@ class lar_solver : public column_namer {
     inline void set_column_value(unsigned j, const impq& v) {
         m_mpq_lar_core_solver.m_r_solver.update_x(j, v);
     }
+    bool term_has_a_big_num(unsigned) const;
+    void insert_to_columns_with_changed_bounds(unsigned j);
 public:
+    tv column_to_term(unsigned) const;
     inline void set_column_value_test(unsigned j, const impq& v) {
         set_column_value(j, v);
     }
@@ -286,7 +291,6 @@ public:
     constraint_index mk_var_bound(var_index j, lconstraint_kind kind, const mpq & right_side);
     void activate(constraint_index ci);
     void random_update(unsigned sz, var_index const * vars);
-    void propagate_bounds_on_terms(lp_bound_propagator & bp);
     void propagate_bounds_for_touched_rows(lp_bound_propagator & bp);    
     bool is_fixed(column_index const& j) const { return column_is_fixed(j); }
     inline column_index to_column_index(unsigned v) const { return column_index(external_to_column_index(v)); }
@@ -468,10 +472,18 @@ public:
             return -1;
         }
     }
+    void remove_term_from_columns_to_terms(unsigned);
+
+    const hash_u_set& terms_of_column(column_index j) const {
+        static hash_u_set empty;
+        if (j >= m_columns_to_terms.size())
+            return empty;
+        return m_columns_to_terms[j];
+    }
     unsigned usage_in_terms(column_index j) const {
-        if (j >= m_usage_in_terms.size())
+        if (j >= m_columns_to_terms.size())
             return 0;
-        return m_usage_in_terms[j];
+        return m_columns_to_terms[j].size();
     }
     friend int_solver;
     friend int_branch;

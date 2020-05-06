@@ -200,6 +200,7 @@ public:
     unsigned         limit_on_columns_for_hnf_cutter;
     bool             m_enable_hnf;
     bool             m_print_external_var_name;
+    bool             m_propagate_on_terms;
 #ifdef Z3DEBUG
     unsigned         m_counter_for_debug;
 #endif
@@ -276,6 +277,9 @@ public:
 #endif
     {}
 
+    bool propagate_bounds_on_terms() const { return m_propagate_on_terms; }
+    bool & propagate_bounds_on_terms() { return m_propagate_on_terms; }
+    
     void set_resource_limit(lp_resource_limit& lim) { m_resource_limit = &lim; }
     bool get_cancel_flag() const { return m_resource_limit->get_cancel_flag(); }
 

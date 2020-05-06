@@ -88,9 +88,11 @@ public:
 template<>
 class numeric_traits<rational> {
 public:
+    static rational g_minus_one;
     static bool precise() { return true; }
     static rational const & zero() { return rational::zero(); }
     static rational const & one() { return rational::one(); }
+    static rational const & minus_one() { return g_minus_one; }
     static bool is_zero(const rational & v) { return v.is_zero(); }
     static double get_double(const rational  & d) { return d.get_double();}
     static rational log(rational const& r) { UNREACHABLE(); return r; }
