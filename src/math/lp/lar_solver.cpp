@@ -288,6 +288,11 @@ void lar_solver::propagate_bounds_for_touched_rows(lp_bound_propagator & bp) {
         return; // todo: consider to remove the restriction
 
     if (m_settings.propagate_bounds_on_terms()) {
+        for (unsigned i : m_rows_with_changed_bounds) {
+                propagate_bounds_on_a_term(bp, i);
+                if (settings().get_cancel_flag())
+                    return;
+        }
         for (unsigned j : m_columns_with_changed_bound) {
             for (unsigned i: terms_of_column(j)) {
                 if (m_rows_with_changed_bounds.contains(i))
@@ -297,11 +302,6 @@ void lar_solver::propagate_bounds_for_touched_rows(lp_bound_propagator & bp) {
                 if (settings().get_cancel_flag())
                     return;
             }
-        }
-        for (unsigned i : m_rows_with_changed_bounds) {
-                propagate_bounds_on_a_term(bp, i);
-                if (settings().get_cancel_flag())
-                    return;
         }
         m_rows_with_changed_bounds.clear();
     } else {
