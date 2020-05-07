@@ -288,18 +288,22 @@ void lar_solver::propagate_bounds_for_touched_rows(lp_bound_propagator & bp) {
         return; // todo: consider to remove the restriction
 
     if (m_settings.propagate_bounds_on_terms()) {
-        m_terms_with_changed_bounds.clear();
-        m_terms_with_changed_bounds.resize(number_of_vars());
         for (unsigned j : m_columns_with_changed_bound) {
             for (unsigned i: terms_of_column(j)) {
-                if (m_terms_with_changed_bounds.contains(i))
+                if (m_rows_with_changed_bounds.contains(i))
                     continue;
-                m_terms_with_changed_bounds.insert(i);                
+                m_rows_with_changed_bounds.insert(i);                
                 propagate_bounds_on_a_term(bp, i);
                 if (settings().get_cancel_flag())
                     return;
             }
         }
+        for (unsigned i : m_rows_with_changed_bounds) {
+                propagate_bounds_on_a_term(bp, i);
+                if (settings().get_cancel_flag())
+                    return;
+        }
+        m_rows_with_changed_bounds.clear();
     } else {
         for (unsigned i : m_rows_with_changed_bounds) {
             calculate_implied_bounds_for_row(i, bp);
@@ -1718,8 +1722,9 @@ void lar_solver::add_new_var_to_core_fields_for_mpq(bool register_in_basis) {
         A_r().add_row();
         m_mpq_lar_core_solver.m_r_heading.push_back(m_mpq_lar_core_solver.m_r_basis.size());
         m_mpq_lar_core_solver.m_r_basis.push_back(j);
-        if (m_settings.bound_propagation())
-            m_rows_with_changed_bounds.insert(A_r().row_count() - 1);
+        if (m_settings.bound_propagation()) {            
+            m_rows_with_changed_bounds.insert(m_settings.propagate_bounds_on_terms()? m_terms.size() - 1 : A_r().row_count() - 1);
+        }
     }
     else {
         m_mpq_lar_core_solver.m_r_heading.push_back(-static_cast<int>(m_mpq_lar_core_solver.m_r_nbasis.size()) - 1);
@@ -1794,8 +1799,9 @@ var_index lar_solver::add_term(const vector<std::pair<mpq, var_index>> & coeffs,
     var_index ret = tv::mask_term(adjusted_term_index);
     if (use_tableau() && !coeffs.empty()) {
         add_row_from_term_no_constraint(m_terms.back(), ret);
-        if (m_settings.bound_propagation())
-            m_rows_with_changed_bounds.insert(A_r().row_count() - 1);
+        if (m_settings.bound_propagation()) {
+            m_rows_with_changed_bounds.insert(m_settings.propagate_bounds_on_terms()? m_terms.size() - 1 : A_r().row_count() - 1);
+        }
     }
     lp_assert(m_var_register.size() == A_r().column_count());
     if (m_need_register_terms) {

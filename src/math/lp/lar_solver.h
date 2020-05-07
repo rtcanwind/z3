@@ -90,7 +90,6 @@ class lar_solver : public column_namer {
     // the set of column indices j such that bounds have changed for j
     u_set                                               m_columns_with_changed_bound;
     u_set                                               m_rows_with_changed_bounds;
-    u_set                                               m_terms_with_changed_bounds;
     u_set                                               m_basic_columns_with_changed_cost;
     // these are basic columns with the value changed, so the the corresponding row in the tableau
     // does not sum to zero anymore
