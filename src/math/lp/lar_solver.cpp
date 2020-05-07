@@ -260,7 +260,18 @@ void lar_solver::explain_implied_bound(implied_bound & ib, lp_bound_propagator &
             bp.consume(a, witness);
         }
     } else {
-        NOT_IMPLEMENTED_YET();
+        unsigned k = to_column(tv::mask_term(i));
+        for (auto const& r : lar_term::get_var_coeffs(*m_terms[i], k)) {
+            unsigned j = r.var();
+            if (j == bound_j) continue;
+            mpq const& a = r.coeff();
+            int a_sign = is_pos(a)? 1: -1;
+            int sign = j_sign * a_sign;
+            const ul_pair & ul =  m_columns_to_ul_pairs[j];
+            auto witness = sign > 0? ul.upper_bound_witness(): ul.lower_bound_witness();
+            lp_assert(is_valid(witness));
+            bp.consume(a, witness);
+        }
     }
     // lp_assert(implied_bound_is_correctly_explained(ib, explanation));
 }
@@ -277,18 +288,18 @@ void lar_solver::propagate_bounds_for_touched_rows(lp_bound_propagator & bp) {
         return; // todo: consider to remove the restriction
 
     if (m_settings.propagate_bounds_on_terms()) {
-    m_terms_with_changed_bounds.clear();
-    m_terms_with_changed_bounds.resize(number_of_vars());
-    for (unsigned j : m_columns_with_changed_bound) {
-        for (unsigned i: terms_of_column(j)) {
-            if (m_terms_with_changed_bounds.contains(i))
-                continue;
-            m_terms_with_changed_bounds.insert(i);                
-            propagate_bounds_on_a_term(bp, i);
-            if (settings().get_cancel_flag())
-                return;
+        m_terms_with_changed_bounds.clear();
+        m_terms_with_changed_bounds.resize(number_of_vars());
+        for (unsigned j : m_columns_with_changed_bound) {
+            for (unsigned i: terms_of_column(j)) {
+                if (m_terms_with_changed_bounds.contains(i))
+                    continue;
+                m_terms_with_changed_bounds.insert(i);                
+                propagate_bounds_on_a_term(bp, i);
+                if (settings().get_cancel_flag())
+                    return;
+            }
         }
-    }
     } else {
         for (unsigned i : m_rows_with_changed_bounds) {
             calculate_implied_bounds_for_row(i, bp);
