@@ -271,20 +271,6 @@ class theory_lra::imp {
     scoped_ptr<nla::solver>  m_nla;
     scoped_ptr<scoped_anum>  m_a1, m_a2;
 
-    struct switcher {
-        theory_lra::imp& m_th_imp;
-        scoped_ptr<nla::solver>*  m_nla;
-        switcher(theory_lra::imp& i): m_th_imp(i), m_nla(nullptr) {
-        }
-        
-        bool need_check() {
-            if (m_nla != nullptr)
-                return (*m_nla)->need_check();
-            return false;
-        }
-                
-    };
-
     // integer arithmetic
     scoped_ptr<lp::int_solver> m_lia;
 
@@ -315,7 +301,6 @@ class theory_lra::imp {
     scoped_ptr<lp::lar_solver> m_solver;
     resource_limit         m_resource_limit;
     lp_bounds              m_new_bounds;
-    switcher               m_switcher;
     symbol                 m_farkas;
 
     context& ctx() const { return th.get_context(); }
@@ -957,7 +942,6 @@ public:
         m_model_eqs(DEFAULT_HASHTABLE_INITIAL_CAPACITY, var_value_hash(*this), var_value_eq(*this)),
         m_solver(nullptr),
         m_resource_limit(*this),
-        m_switcher(*this),
         m_farkas("farkas") {
     }
         
@@ -1678,7 +1662,7 @@ public:
                 break;
             }
             
-            switch (check_nra()) {
+            switch (check_nla()) {
             case l_true:
                 break;
             case l_false:
@@ -2116,7 +2100,7 @@ public:
         set_conflict_or_lemma(core, false);
     }
     
-    lbool check_nra_continue() {
+    lbool check_nla_continue() {
         m_a1 = nullptr; m_a2 = nullptr;
         auto & lv = m_nla_lemma_vector;
         lbool r = m_nla->check(lv);
@@ -2142,14 +2126,14 @@ public:
         return r;
     }
 
-    lbool check_nra() {
+    lbool check_nla() {
         if (!m.inc()) {
             TRACE("arith", tout << "canceled\n";);
             return l_undef;
         }
         if (!m_nla) return l_true;
-        if (!m_switcher.need_check()) return l_true;
-        return check_nra_continue();
+        if (!m_nla->need_check()) return l_true;
+        return check_nla_continue();
     }
 
     /**
